@@ -1,0 +1,54 @@
+{
+    "nodes": [
+        {
+            "id": 0,
+            "label": "TP"
+        },
+        {
+            "id": 1,
+            "label": "TN"
+        },
+        {
+            "id": 2,
+            "label": "p1"
+        },
+        {
+            "id": 3,
+            "label": "VCC"
+        },
+        {
+            "id": 4,
+            "label": "a"
+        },
+        {
+            "id": 5,
+            "label": "GND"
+        }
+    ],
+    "edges": [
+        {
+            "source": 0,
+            "target": 4
+        },
+        {
+            "source": 1,
+            "target": 4
+        },
+        {
+            "source": 2,
+            "target": 0
+        },
+        {
+            "source": 2,
+            "target": 1
+        },
+        {
+            "source": 3,
+            "target": 0
+        },
+        {
+            "source": 5,
+            "target": 1
+        }
+    ]
+}

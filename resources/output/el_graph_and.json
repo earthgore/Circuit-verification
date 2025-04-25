@@ -1,0 +1,130 @@
+{
+    "nodes": [
+        {
+            "id": 0,
+            "label": "TP1"
+        },
+        {
+            "id": 1,
+            "label": "TP2"
+        },
+        {
+            "id": 2,
+            "label": "TP3"
+        },
+        {
+            "id": 3,
+            "label": "TN4"
+        },
+        {
+            "id": 4,
+            "label": "TN5"
+        },
+        {
+            "id": 5,
+            "label": "TN6"
+        },
+        {
+            "id": 6,
+            "label": "p1"
+        },
+        {
+            "id": 7,
+            "label": "VCC"
+        },
+        {
+            "id": 8,
+            "label": "a"
+        },
+        {
+            "id": 9,
+            "label": "b"
+        },
+        {
+            "id": 10,
+            "label": "s"
+        },
+        {
+            "id": 11,
+            "label": "p2"
+        },
+        {
+            "id": 12,
+            "label": "GND"
+        }
+    ],
+    "edges": [
+        {
+            "source": 0,
+            "target": 8
+        },
+        {
+            "source": 1,
+            "target": 9
+        },
+        {
+            "source": 2,
+            "target": 6
+        },
+        {
+            "source": 3,
+            "target": 8
+        },
+        {
+            "source": 4,
+            "target": 9
+        },
+        {
+            "source": 5,
+            "target": 6
+        },
+        {
+            "source": 6,
+            "target": 0
+        },
+        {
+            "source": 6,
+            "target": 1
+        },
+        {
+            "source": 6,
+            "target": 3
+        },
+        {
+            "source": 7,
+            "target": 0
+        },
+        {
+            "source": 7,
+            "target": 1
+        },
+        {
+            "source": 7,
+            "target": 2
+        },
+        {
+            "source": 10,
+            "target": 2
+        },
+        {
+            "source": 10,
+            "target": 5
+        },
+        {
+            "source": 11,
+            "target": 3
+        },
+        {
+            "source": 11,
+            "target": 4
+        },
+        {
+            "source": 12,
+            "target": 4
+        },
+        {
+            "source": 12,
+            "target": 5
+        }
+    ]
+}

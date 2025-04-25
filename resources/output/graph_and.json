@@ -1,0 +1,130 @@
+{
+    "nodes": [
+        {
+            "id": 0,
+            "label": "N0"
+        },
+        {
+            "id": 1,
+            "label": "N1"
+        },
+        {
+            "id": 2,
+            "label": "N2"
+        },
+        {
+            "id": 3,
+            "label": "P3"
+        },
+        {
+            "id": 4,
+            "label": "P4"
+        },
+        {
+            "id": 5,
+            "label": "P5"
+        },
+        {
+            "id": 26,
+            "label": "M1_26"
+        },
+        {
+            "id": 27,
+            "label": "M1_27"
+        },
+        {
+            "id": 44,
+            "label": "M2_44"
+        },
+        {
+            "id": 45,
+            "label": "M2_45"
+        },
+        {
+            "id": 60,
+            "label": "SI_60"
+        },
+        {
+            "id": 61,
+            "label": "SI_61"
+        },
+        {
+            "id": 65,
+            "label": "C_65"
+        }
+    ],
+    "edges": [
+        {
+            "source": 0,
+            "target": 27
+        },
+        {
+            "source": 1,
+            "target": 65
+        },
+        {
+            "source": 1,
+            "target": 60
+        },
+        {
+            "source": 2,
+            "target": 61
+        },
+        {
+            "source": 3,
+            "target": 60
+        },
+        {
+            "source": 4,
+            "target": 61
+        },
+        {
+            "source": 5,
+            "target": 27
+        },
+        {
+            "source": 26,
+            "target": 0
+        },
+        {
+            "source": 26,
+            "target": 5
+        },
+        {
+            "source": 27,
+            "target": 2
+        },
+        {
+            "source": 27,
+            "target": 3
+        },
+        {
+            "source": 27,
+            "target": 4
+        },
+        {
+            "source": 44,
+            "target": 3
+        },
+        {
+            "source": 44,
+            "target": 4
+        },
+        {
+            "source": 44,
+            "target": 5
+        },
+        {
+            "source": 45,
+            "target": 0
+        },
+        {
+            "source": 45,
+            "target": 1
+        },
+        {
+            "source": 65,
+            "target": 2
+        }
+    ]
+}
