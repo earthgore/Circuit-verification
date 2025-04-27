@@ -92,8 +92,8 @@ def load_graph_from_json(file_path):
     return Graph(edges, labels)
 
 if __name__ == "__main__":
-    G1 = load_graph_from_json('rand_graph_1000000.json')
-    G2 = load_graph_from_json('rand_graph_1000000.json')
+    G1 = load_graph_from_json('resources/output/el_graph.json')
+    G2 = load_graph_from_json('resources/output/graph.json')
         
     print("Running Nauty-Traces algo...")
     

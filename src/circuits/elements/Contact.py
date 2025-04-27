@@ -3,7 +3,8 @@ class Contact:
         self.name = name
         self.layer1 = layer1
         self.layer2 = layer2
-        self.contact_polygon = contact_polygon
-        self.layer_polygon = layer_polygon
+        self.polygon_contact = contact_polygon
+        self.polygon_layer = layer_polygon
         self.id = id
         self.connections = set()
+        

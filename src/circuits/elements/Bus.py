@@ -5,4 +5,5 @@ class Bus:
         self.polygons = polygons
         self.id = id
         self.connections = set()
+        self.graph_connections = set()
         self.on_graph = True

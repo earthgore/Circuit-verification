@@ -71,8 +71,8 @@ def load_lazlo_babai_graph(file_path):
     return LazloBabaiGraph(edges)
 
 if __name__ == "__main__":
-    G1 = load_lazlo_babai_graph('rand_graph_1000000.json')
-    G2 = load_lazlo_babai_graph('rand_graph_1000000.json')
+    G1 = load_lazlo_babai_graph('resources/output/el_graph.json')
+    G2 = load_lazlo_babai_graph('resources/output/graph.json')
         
     print("Running Lazlo-Babai algo...")
     

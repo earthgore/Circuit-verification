@@ -8,5 +8,6 @@ class Transistor:
         self.connections = set()
         self.gate_connections = set()
 
+
     def __str__(self):
         return f"{self.type}: {self.gate} {self.drain} {self.source}\n"

@@ -216,7 +216,7 @@ def start_gui():
                     selected_layers.append(layer)
                     
         opacity = opacity_slider_var.get() if opacity_var.get() else 1.0
-        graph = parse_cif_to_graph('input/AND_2.cif')
+        graph = parse_cif_to_graph('resources/input/adder2.cif')
         create_3d_plot(graph, selected_layers, show_labels_var.get(), opacity)
 
     def select_all(checkbox_group):

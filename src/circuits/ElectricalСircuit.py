@@ -1,21 +1,23 @@
-from elements.Transistor import Transistor
+from src.circuits.elements.Transistor import Transistor
 import json
 
 class ElecrticalCircuit:
-    def __init__(self, name, filename):
+    def __init__(self, name):
         self.name = name
         self.id_counter = 0
         self.transistors = []
 
+
+    def load_NET(self, filename):    
         with open(filename, 'r') as file:
             for line in file:
                 split_line = line.split(" ")
                 
-                self.transistors.append(Transistor(split_line[2], split_line[3], split_line[1], split_line[0], self.id_counter))
+                self.transistors.append(Transistor(split_line[2], split_line[3], split_line[1], split_line[0][1], self.id_counter))
                 self.id_counter += 1
 
 
-    def create_buses(self):
+    def compile(self):
         self.buses = []
         for trans1 in self.transistors:
             for bus in self.buses:
@@ -44,12 +46,12 @@ class ElecrticalCircuit:
 
 
     
-    def to_json_graph(self, filename):
+    def graph_to_json(self, filename):
         nodes = []
         edges = []
 
         for trans in self.transistors:
-            nodes.append({"id": trans.id, "label": trans.type})
+            nodes.append({"id": trans.id, "name": trans.type + str(trans.id), "label": trans.type})
             for con in trans.connections:
                 edges.append({"source": trans.id, "target": con})
             for con in trans.gate_connections:
@@ -57,7 +59,7 @@ class ElecrticalCircuit:
 
 
         for bus in self.buses:
-            nodes.append({"id": bus[0], "label": bus[1]})
+            nodes.append({"id": bus[0], "name": bus[1], "label" : "bus"})
             for con in bus[2]:
                 edges.append({"source": bus[0], "target": con})
 

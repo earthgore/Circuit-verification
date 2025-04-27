@@ -156,16 +156,16 @@ class GraphIsomorphismCheckerApp(ctk.CTk):
         
         start_time = timer()
         isomorphic = isomorphism.GraphMatcher(self.graph1, self.graph2)
-        end_time = timer()
-        
-        elapsed_time = end_time - start_time
-        self.log(f"Время выполнения: {elapsed_time:.6f} секунд", "INFO")
         
         if isomorphic.is_isomorphic():
             self.log("Графы изоморфны!", "SUCCESS")
         else:
             self.log("Графы не изоморфны!", "FAILURE")
 
+        end_time = timer()
+        elapsed_time = end_time - start_time
+        self.log(f"Время выполнения: {elapsed_time:.6f} секунд", "INFO")
+        
     def log(self, message, tag):
         self.log_widget.configure(state='normal')
         self.log_widget.insert("end", message + "\n", tag)
