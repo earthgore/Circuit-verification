@@ -1,5 +1,4 @@
-import json
-import networkx as nx
+from graph_from_json import load_graph_from_json
 from timeit import default_timer as timer
 
 def weisfeiler_lehman_hash(graph, iterations=3):
@@ -16,18 +15,7 @@ def weisfeiler_lehman_hash(graph, iterations=3):
     multiset_label = ''.join(sorted(node_labels.values()))
     return multiset_label
 
-def load_graph_from_json(file_path):
-    with open(file_path, 'r') as file:
-        data = json.load(file)
-    
-    G = nx.Graph()
-    for node in data['nodes']:
-        G.add_node(node['id'], label=node['label'])
-    
-    for edge in data['edges']:
-        G.add_edge(edge['source'], edge['target'])
-    
-    return G
+
 
 def weisfeiler_lehman_isomorphism(G1, G2, iterations=3):
     G1_hash = weisfeiler_lehman_hash(G1, iterations)

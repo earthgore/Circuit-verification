@@ -6,6 +6,7 @@ from src.circuits.elements.Bus import Bus
 import intersection_cpp as plgn
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
+from networkx import Graph
 import json
 
 class TopologicalCircuit:
@@ -16,6 +17,7 @@ class TopologicalCircuit:
         self.transistors = []
         self.contacts = []
         self.buses = []
+        self.nx_graph = Graph()
 
         
     def load_CIF(self, filename):
@@ -122,26 +124,34 @@ class TopologicalCircuit:
         find_bus("SI", "SI")
 
 
-    def visualize_trans(self):
+    def visualize_trans(self, subcircuit):
         fig, ax = plt.subplots()
         
-        for i in range(len(self.transistors)):
-            ax.add_patch(Polygon(self.transistors[i].source, closed=True, fill=True, color='yellow', alpha=0.4))
-            ax.add_patch(Polygon(self.transistors[i].drain, closed=True, fill=True, color='red', alpha=0.4))
-            ax.add_patch(Polygon(self.transistors[i].gate, closed=True, fill=True, color='blue', alpha=0.4))
-
-        for i in range(len(self.contacts)):
-            ax.add_patch(Polygon(self.contacts[i].polygon_contact, closed=True, fill=True, color='cyan', alpha=0.6))
- 
-        for i in range(len(self.buses)):
-            if self.buses[i].id in [119, 162]:
-                for poly in self.buses[i].polygons:
-                    ax.add_patch(Polygon(poly, closed=True, fill=True, color=f"#B{i%10}8{i%10}C{i%10}", alpha=0.7))
-                    print(self.buses[i].id)
-                    print(poly)
+        for trans in self.transistors:
+            if trans.id in subcircuit:
+                ax.add_patch(Polygon(trans.source, closed=True, fill=True, color='yellow', alpha=0.7))
+                ax.add_patch(Polygon(trans.drain, closed=True, fill=True, color='red', alpha=0.7))
+                ax.add_patch(Polygon(trans.gate, closed=True, fill=True, color='blue', alpha=0.7))
             else:
-                for poly in self.buses[i].polygons:
-                    ax.add_patch(Polygon(poly, closed=True, fill=True, color=f"#B{i%10}8{i%10}C{i%10}", alpha=0.2))
+                ax.add_patch(Polygon(trans.source, closed=True, fill=True, color='yellow', alpha=0.2))
+                ax.add_patch(Polygon(trans.drain, closed=True, fill=True, color='red', alpha=0.2))
+                ax.add_patch(Polygon(trans.gate, closed=True, fill=True, color='blue', alpha=0.2))
+
+        for contact in self.contacts:
+            ax.add_patch(Polygon(contact.polygon_contact, closed=True, fill=True, color='cyan', alpha=0.6))
+ 
+        for bus in self.buses:
+            if bus.id in subcircuit:
+                for poly in bus.polygons:
+                    ax.add_patch(Polygon(poly, closed=True, fill=True, color=f"#B785C4", alpha=0.7))
+                for subbus_id in bus.connections:
+                    for subbus in self.buses:
+                        if subbus.id == subbus_id and subbus.on_graph == False:
+                            for poly in subbus.polygons:
+                                ax.add_patch(Polygon(poly, closed=True, fill=True, color=f"#B785C4", alpha=0.7))
+            else:
+                for poly in bus.polygons:
+                    ax.add_patch(Polygon(poly, closed=True, fill=True, color=f"#B785C4", alpha=0.2))
 
         ax.set_aspect('equal')
         ax.set_xlim([-400, 8000])
@@ -261,13 +271,28 @@ class TopologicalCircuit:
         for trans in self.transistors:
             for bus_SI in self.buses:
                 for bus in self.buses:
-                    if bus_SI.layer == "SI" and bus_SI.id in trans.gate_connections and (bus_SI.id in bus.graph_connections or bus.id in bus_SI.graph_connections):
-                        trans.gate_connections.add(bus.id)
-                        if bus_SI.id in trans.gate_connections: 
-                            trans.gate_connections.remove(bus_SI.id)
+                    if bus_SI.layer == "SI" and bus_SI.id in trans.graph_gate_connections and (bus_SI.id in bus.graph_connections or bus.id in bus_SI.graph_connections):
+                        trans.graph_gate_connections.add(bus.id)
+                        if bus_SI.id in trans.graph_gate_connections: 
+                            trans.graph_gate_connections.remove(bus_SI.id)
                         if bus_SI.id in bus.graph_connections: 
                             bus.graph_connections.remove(bus_SI.id)
                         bus_SI.on_graph = False
+
+    
+    def graph_nx_compile(self):
+        for trans in self.transistors:
+            self.nx_graph.add_node(trans.id, label=trans.type)
+            for con in trans.connections:
+                self.nx_graph.add_edge(trans.id, con, label="bus")
+            for con in trans.graph_gate_connections:
+                self.nx_graph.add_edge(trans.id, con, label="gate")
+
+        for bus in self.buses:
+            if bus.on_graph:
+                self.nx_graph.add_node(bus.id, label="bus")
+                for con in bus.graph_connections:
+                    self.nx_graph.add_edge(bus.id, con, label="bus")
 
 
     def compile(self):
@@ -283,15 +308,22 @@ class TopologicalCircuit:
         self.connect_trans()
         self.connect_gate()
 
+        self.graph_merge()
+        self.graph_nx_compile()
+
+
     def graph_merge(self):
         for bus in self.buses:
-                bus.graph_connections = bus.graph_connections.union(bus.connections)
+            bus.graph_connections = bus.graph_connections.union(bus.connections)
+        for trans in self.transistors:
+            trans.graph_gate_connections = trans.graph_gate_connections.union(trans.gate_connections)
         self.merge_contact()
         self.merge_M2()
         self.merge_SI()
+        
 
     def graph_to_json(self, filename):
-        self.graph_merge()
+        
 
         nodes = []
         edges = []
@@ -299,16 +331,16 @@ class TopologicalCircuit:
         for trans in self.transistors:
             nodes.append({"id": trans.id, "name": trans.type + str(trans.id), "label": trans.type})
             for con in trans.connections:
-                edges.append({"source": trans.id, "target": con})
-            for con in trans.gate_connections:
-                edges.append({"source": trans.id, "target": con})
+                edges.append({"source": trans.id, "target": con, "label": "bus"})
+            for con in trans.graph_gate_connections:
+                edges.append({"source": trans.id, "target": con, "label": "gate"})
 
 
         for bus in self.buses:
             if bus.on_graph:
                 nodes.append({"id": bus.id, "name": bus.name + "_" + str(bus.id), "label": "bus"})
                 for con in bus.graph_connections:
-                    edges.append({"source": bus.id, "target": con})
+                    edges.append({"source": bus.id, "target": con, "label": "bus"})
 
 
         graph = {
@@ -320,8 +352,3 @@ class TopologicalCircuit:
 
         with open(filename, 'w') as file:
             file.write(graph_json)
-
-    
-
-
-

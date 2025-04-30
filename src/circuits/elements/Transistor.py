@@ -7,6 +7,7 @@ class Transistor:
         self.id = id
         self.connections = set()
         self.gate_connections = set()
+        self.graph_gate_connections = set()
 
 
     def __str__(self):

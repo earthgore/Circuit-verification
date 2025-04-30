@@ -239,339 +239,423 @@
     "edges": [
         {
             "source": 0,
-            "target": 30
+            "target": 30,
+            "label": "gate"
         },
         {
             "source": 1,
-            "target": 31
+            "target": 31,
+            "label": "gate"
         },
         {
             "source": 2,
-            "target": 30
+            "target": 30,
+            "label": "gate"
         },
         {
             "source": 3,
-            "target": 34
+            "target": 34,
+            "label": "gate"
         },
         {
             "source": 4,
-            "target": 31
+            "target": 31,
+            "label": "gate"
         },
         {
             "source": 5,
-            "target": 30
+            "target": 30,
+            "label": "gate"
         },
         {
             "source": 6,
-            "target": 31
+            "target": 31,
+            "label": "gate"
         },
         {
             "source": 7,
-            "target": 34
+            "target": 34,
+            "label": "gate"
         },
         {
             "source": 8,
-            "target": 33
+            "target": 33,
+            "label": "gate"
         },
         {
             "source": 9,
-            "target": 30
+            "target": 30,
+            "label": "gate"
         },
         {
             "source": 10,
-            "target": 34
+            "target": 34,
+            "label": "gate"
         },
         {
             "source": 11,
-            "target": 31
+            "target": 31,
+            "label": "gate"
         },
         {
             "source": 12,
-            "target": 36
+            "target": 36,
+            "label": "gate"
         },
         {
             "source": 13,
-            "target": 33
+            "target": 33,
+            "label": "gate"
         },
         {
             "source": 14,
-            "target": 30
+            "target": 30,
+            "label": "gate"
         },
         {
             "source": 15,
-            "target": 31
+            "target": 31,
+            "label": "gate"
         },
         {
             "source": 16,
-            "target": 30
+            "target": 30,
+            "label": "gate"
         },
         {
             "source": 17,
-            "target": 34
+            "target": 34,
+            "label": "gate"
         },
         {
             "source": 18,
-            "target": 31
+            "target": 31,
+            "label": "gate"
         },
         {
             "source": 19,
-            "target": 30
+            "target": 30,
+            "label": "gate"
         },
         {
             "source": 20,
-            "target": 31
+            "target": 31,
+            "label": "gate"
         },
         {
             "source": 21,
-            "target": 34
+            "target": 34,
+            "label": "gate"
         },
         {
             "source": 22,
-            "target": 33
+            "target": 33,
+            "label": "gate"
         },
         {
             "source": 23,
-            "target": 31
+            "target": 31,
+            "label": "gate"
         },
         {
             "source": 24,
-            "target": 34
+            "target": 34,
+            "label": "gate"
         },
         {
             "source": 25,
-            "target": 30
+            "target": 30,
+            "label": "gate"
         },
         {
             "source": 26,
-            "target": 36
+            "target": 36,
+            "label": "gate"
         },
         {
             "source": 27,
-            "target": 33
+            "target": 33,
+            "label": "gate"
         },
         {
             "source": 28,
-            "target": 0
+            "target": 0,
+            "label": "bus"
         },
         {
             "source": 28,
-            "target": 1
+            "target": 1,
+            "label": "bus"
         },
         {
             "source": 28,
-            "target": 3
+            "target": 3,
+            "label": "bus"
         },
         {
             "source": 29,
-            "target": 0
+            "target": 0,
+            "label": "bus"
         },
         {
             "source": 29,
-            "target": 1
+            "target": 1,
+            "label": "bus"
         },
         {
             "source": 29,
-            "target": 2
+            "target": 2,
+            "label": "bus"
         },
         {
             "source": 29,
-            "target": 5
+            "target": 5,
+            "label": "bus"
         },
         {
             "source": 29,
-            "target": 6
+            "target": 6,
+            "label": "bus"
         },
         {
             "source": 29,
-            "target": 7
+            "target": 7,
+            "label": "bus"
         },
         {
             "source": 29,
-            "target": 9
+            "target": 9,
+            "label": "bus"
         },
         {
             "source": 29,
-            "target": 12
+            "target": 12,
+            "label": "bus"
         },
         {
             "source": 29,
-            "target": 13
+            "target": 13,
+            "label": "bus"
         },
         {
             "source": 32,
-            "target": 2
+            "target": 2,
+            "label": "bus"
         },
         {
             "source": 32,
-            "target": 4
+            "target": 4,
+            "label": "bus"
         },
         {
             "source": 33,
-            "target": 3
+            "target": 3,
+            "label": "bus"
         },
         {
             "source": 33,
-            "target": 4
+            "target": 4,
+            "label": "bus"
         },
         {
             "source": 33,
-            "target": 17
+            "target": 17,
+            "label": "bus"
         },
         {
             "source": 33,
-            "target": 18
+            "target": 18,
+            "label": "bus"
         },
         {
             "source": 35,
-            "target": 5
+            "target": 5,
+            "label": "bus"
         },
         {
             "source": 35,
-            "target": 6
+            "target": 6,
+            "label": "bus"
         },
         {
             "source": 35,
-            "target": 7
+            "target": 7,
+            "label": "bus"
         },
         {
             "source": 35,
-            "target": 8
+            "target": 8,
+            "label": "bus"
         },
         {
             "source": 36,
-            "target": 8
+            "target": 8,
+            "label": "bus"
         },
         {
             "source": 36,
-            "target": 11
+            "target": 11,
+            "label": "bus"
         },
         {
             "source": 36,
-            "target": 22
+            "target": 22,
+            "label": "bus"
         },
         {
             "source": 36,
-            "target": 23
+            "target": 23,
+            "label": "bus"
         },
         {
             "source": 37,
-            "target": 9
+            "target": 9,
+            "label": "bus"
         },
         {
             "source": 37,
-            "target": 10
+            "target": 10,
+            "label": "bus"
         },
         {
             "source": 38,
-            "target": 10
+            "target": 10,
+            "label": "bus"
         },
         {
             "source": 38,
-            "target": 11
+            "target": 11,
+            "label": "bus"
         },
         {
             "source": 39,
-            "target": 12
+            "target": 12,
+            "label": "bus"
         },
         {
             "source": 39,
-            "target": 26
+            "target": 26,
+            "label": "bus"
         },
         {
             "source": 40,
-            "target": 13
+            "target": 13,
+            "label": "bus"
         },
         {
             "source": 40,
-            "target": 27
+            "target": 27,
+            "label": "bus"
         },
         {
             "source": 41,
-            "target": 14
+            "target": 14,
+            "label": "bus"
         },
         {
             "source": 41,
-            "target": 15
+            "target": 15,
+            "label": "bus"
         },
         {
             "source": 41,
-            "target": 16
+            "target": 16,
+            "label": "bus"
         },
         {
             "source": 41,
-            "target": 19
+            "target": 19,
+            "label": "bus"
         },
         {
             "source": 41,
-            "target": 20
+            "target": 20,
+            "label": "bus"
         },
         {
             "source": 41,
-            "target": 21
+            "target": 21,
+            "label": "bus"
         },
         {
             "source": 41,
-            "target": 25
+            "target": 25,
+            "label": "bus"
         },
         {
             "source": 41,
-            "target": 26
+            "target": 26,
+            "label": "bus"
         },
         {
             "source": 41,
-            "target": 27
+            "target": 27,
+            "label": "bus"
         },
         {
             "source": 42,
-            "target": 14
+            "target": 14,
+            "label": "bus"
         },
         {
             "source": 42,
-            "target": 15
+            "target": 15,
+            "label": "bus"
         },
         {
             "source": 42,
-            "target": 17
+            "target": 17,
+            "label": "bus"
         },
         {
             "source": 43,
-            "target": 16
+            "target": 16,
+            "label": "bus"
         },
         {
             "source": 43,
-            "target": 18
+            "target": 18,
+            "label": "bus"
         },
         {
             "source": 44,
-            "target": 19
+            "target": 19,
+            "label": "bus"
         },
         {
             "source": 44,
-            "target": 20
+            "target": 20,
+            "label": "bus"
         },
         {
             "source": 44,
-            "target": 21
+            "target": 21,
+            "label": "bus"
         },
         {
             "source": 44,
-            "target": 22
+            "target": 22,
+            "label": "bus"
         },
         {
             "source": 45,
-            "target": 23
+            "target": 23,
+            "label": "bus"
         },
         {
             "source": 45,
-            "target": 24
+            "target": 24,
+            "label": "bus"
         },
         {
             "source": 46,
-            "target": 24
+            "target": 24,
+            "label": "bus"
         },
         {
             "source": 46,
-            "target": 25
+            "target": 25,
+            "label": "bus"
         }
     ]
 }
