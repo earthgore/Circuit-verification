@@ -24,7 +24,7 @@ std::vector<std::pair<double, double>> subtract_polygon(
         const std::vector<std::pair<double, double>>& polygon1,
         const std::vector<std::pair<double, double>>& polygon2);
 
-PYBIND11_MODULE(intersection_cpp, m) 
+PYBIND11_MODULE(intersection_clipper_cpp, m) 
 {
     m.def("is_point_inside_polygon", &is_point_inside_polygon, "Check if point is inside polygon");
     m.def("do_lines_intersect", &do_lines_intersect, "Check if lines intersect");

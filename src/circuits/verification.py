@@ -150,7 +150,7 @@ def verification(filename_electrical, name_electrical, filename_topological, nam
     print(f"electrical circuit : {G1.number_of_nodes()} : {G1.number_of_edges()}")
     print(f"topological circuit : {G2.number_of_nodes()} : {G2.number_of_edges()}")
 
-    isomorph, mapping, time = subgraph_monomorphism(electrical_circuit.nx_graph, topological_circuit.nx_graph)
+    isomorph, mapping, time = subgraph_monomorphism(G2, G1)
     
     if isomorph:
         print("The graphs are isomorphic.")
@@ -158,7 +158,9 @@ def verification(filename_electrical, name_electrical, filename_topological, nam
         print("The graphs are not isomorphic.")
 
     print(mapping)
-    degrees = dict(G2.degree())
+    topological_circuit.visualize_trans([])
+
+    degrees = dict(electrical_circuit.nx_graph.degree())
 
     # Подсчитываем сколько вершин каждой степени
     degree_counts = {}
@@ -174,7 +176,21 @@ def verification(filename_electrical, name_electrical, filename_topological, nam
     for degree, count in sorted(degree_counts.items()):
         print(f"Степень {degree}: {count} вершины")
 
-    topological_circuit.visualize_trans(mapping.keys())
+    degrees = dict(topological_circuit.nx_graph.degree())
+
+    # Подсчитываем сколько вершин каждой степени
+    degree_counts = {}
+
+    for degree in degrees.values():
+        if degree in degree_counts:
+            degree_counts[degree] += 1
+        else:
+            degree_counts[degree] = 1
+
+    # Выводим количество вершин каждой степени
+    print("Количество вершин каждой степени связности:")
+    for degree, count in sorted(degree_counts.items()):
+        print(f"Степень {degree}: {count} вершины")
     
     print(f"Time taken: {time:.6f} seconds")
 
