@@ -22,21 +22,30 @@ class TopologicalCircuit:
         
     def load_CIF(self, filename):
         current_layer_name = None
+        polygon_line = ''
+        collecting_polygon = False
         with open(filename, 'r') as file:
             for line in file:
                 line = line.strip()
                 if line.startswith('L '):
                     current_layer_name = line.split()[1].replace(';', '')
-                elif line.startswith('P '):
-                    points = tuple(map(int, re_findall(r'-?\d+', line)))
-                    size_of_points = len(points)
-                    if size_of_points >= 6 and size_of_points > 1 and size_of_points % 2 == 0:
-                        for layer in self.layers:
-                            if layer.name == current_layer_name:
-                                layer.addPolygon([(points[i], points[i + 1]) for i in range(0, size_of_points, 2)])
-                                break
-                        else:
-                            self.layers.append(Layer(current_layer_name, [(points[i], points[i + 1]) for i in range(0, size_of_points, 2)]))
+                elif line.startswith('P ') or collecting_polygon:
+                    polygon_line += ' ' + line
+                    collecting_polygon = not polygon_line.strip().endswith(';')
+                    
+                    if not collecting_polygon:
+                        points = tuple(map(int, re_findall(r'-?\d+', polygon_line)))
+                        size_of_points = len(points)
+                        if size_of_points >= 6 and size_of_points % 2 == 0:
+                            polygon = [(points[i], points[i + 1]) for i in range(0, size_of_points, 2)]
+                            for layer in self.layers:
+                                if layer.name == current_layer_name:
+                                    layer.addPolygon(polygon)
+                                    break
+                            else:
+                                self.layers.append(Layer(current_layer_name, polygon))
+
+                        polygon_line = ''
 
         for layer in self.layers:
             layer.deleteDuplicate()
@@ -53,24 +62,32 @@ class TopologicalCircuit:
         SN_layer = self.find_layer("SN")
         NA_layer = self.find_layer("NA")
         if SN_layer is not None and NA_layer is not None:            
-            for polygon in NA_layer.polygons:
-                for gate in SN_layer.polygons:
-                    if plgn.get_intersection_points(gate, polygon):
-                        source, drain = plgn.split_polygon(plgn.subtract_polygon(polygon, gate))
+            for gate in SN_layer.polygons:
+                for i in range(len(NA_layer.polygons)):
+                    if len(plgn.get_intersection_points(gate, NA_layer.polygons[i])) > 2:
+                        source, drain = plgn.split_polygon(NA_layer.polygons[i], gate)
+                        NA_layer.polygons.pop(i)
+                        NA_layer.polygons.append(drain)
+                        NA_layer.polygons.append(source)
                         if source and drain:
                             self.transistors.append(Transistor(gate, drain, source, "N", self.id_counter))
                             self.id_counter += 1
+                            break
         
         SP_layer = self.find_layer("SP")
         NA_layer = self.find_layer("NA")
         if SP_layer is not None and NA_layer is not None:            
-            for polygon in NA_layer.polygons:
-                for gate in SP_layer.polygons:
-                    if plgn.get_intersection_points(gate, polygon):
-                        source, drain = plgn.split_polygon(plgn.subtract_polygon(polygon, gate))
+            for gate in SP_layer.polygons:
+                for i in range(len(NA_layer.polygons)):
+                    if len(plgn.get_intersection_points(gate, NA_layer.polygons[i])) > 2:
+                        source, drain = plgn.split_polygon(NA_layer.polygons[i], gate)
+                        NA_layer.polygons.pop(i)
+                        NA_layer.polygons.append(drain)
+                        NA_layer.polygons.append(source)
                         if source and drain:
                             self.transistors.append(Transistor(gate, drain , source, "P", self.id_counter))
                             self.id_counter += 1
+                            break
 
 
     def find_all_contacts(self):

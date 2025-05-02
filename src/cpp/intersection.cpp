@@ -237,8 +237,10 @@ std::vector<std::pair<double, double>> subtract_polygon(
 }
 
 std::pair<std::vector<std::pair<double, double>>, std::vector<std::pair<double, double>>> split_polygon(
-    const std::vector<std::pair<double, double>>& polygon)
+    const std::vector<std::pair<double, double>>& polygon1, 
+    const std::vector<std::pair<double, double>>& polygon2)
 {
+    std::vector<std::pair<double, double>> polygon = subtract_polygon(polygon1, polygon2);
     int n = polygon.size();
     for(int i = 0; i < n; ++i)
     {
