@@ -1,43 +1,66 @@
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QCheckBox, QPushButton, QLabel, QSlider, QScrollArea, QFileDialog, 
-    QTextEdit, QGridLayout, QGroupBox
+    QTextEdit, QGridLayout, QGroupBox, QProgressBar
 )
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QThread, Signal, QObject
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 import pyvista as pv
 from pyvistaqt import QtInteractor
-import networkx as nx
 import numpy as np
 import sys
-import re
 from src.circuits.verification import verification
 from src.circuits.verification import search_subcircuit
 from src.circuits.TopologicalCircuit import TopologicalCircuit
 
 
+class MeshBuilderWorker(QObject):
+    meshes_ready = Signal(list)  # [(mesh, color, opacity)]
 
-def create_3d_plot(layers, selected_layers, opacity=1.0, plotter=None, highlighted_polygons=[]):
-    """Generates a 3D plot of the graph with selected layers, ensuring no gaps and grouping specific layers at the same level."""
-    plotter = plotter
-    plotter.set_background("white", top="lightgray") 
-    plotter.enable_anti_aliasing("ssaa")
-    plotter.enable_depth_peeling(64)
+    def __init__(self, layers, selected_layers, highlighted_polygons, opacity):
+        super().__init__()
+        self.layers = layers
+        self.selected_layers = selected_layers
+        self.highlighted_polygons = highlighted_polygons
+        self.opacity = opacity
 
-    layer_order = ['KN', 'P', 'NA', 'SP', 'SN', 'SI', 'CPE', 'CNE', 'CSI', 'CNA', 'CPA', 
+    def run(self):
+        meshes = build_layer_meshes(
+            self.layers,
+            self.selected_layers,
+            self.highlighted_polygons,
+            self.opacity
+        )
+        self.meshes_ready.emit(meshes)
+
+
+class CircuitLoaderWorker(QObject):
+    finished = Signal(object) 
+    error = Signal(str)
+
+    def __init__(self, topological_circuit, file_path_top):
+        super().__init__()
+        self.topological_circuit = topological_circuit
+        self.file_path_top = file_path_top
+
+    def run(self):
+        try:
+            self.topological_circuit.clean()
+            self.topological_circuit.load_CIF(self.file_path_top)
+            self.topological_circuit.compile()
+            self.finished.emit(self.topological_circuit)
+        except Exception as e:
+            self.error.emit(str(e))
+
+
+
+def build_layer_meshes(layers, selected_layers, highlighted_polygons, opacity):
+    layer_order = ['KN', 'P', 'NA', 'SP', 'SN', 'SI', 'CPE', 'CNE', 'CSI', 'CNA', 'CPA',
                    'M1', 'CM1', 'M2', 'CM2']
     layer_thickness = 50
-    space_beteween_layer = 25
+    space_between_layer = 25
 
-    # Сортируем слои в порядке layer_order
-    available_layers = [layer for layer in layer_order if layer in selected_layers]
-    if not available_layers:
-        plotter.add_text("No layers selected", position='upper_edge', font_size=14)
-        plotter.show()
-        return
-
-    # Определяем группы слоев
     layer_groups = {
         'group1': ['P', 'NA'],
         'group2': ['CNA', 'CPA'],
@@ -45,26 +68,7 @@ def create_3d_plot(layers, selected_layers, opacity=1.0, plotter=None, highlight
         'group4': ['SP', 'SN', 'SI']
     }
 
-    # Словарь для назначения уровней по Z для каждого слоя
-    layer_z_coordinates = {}
-    assigned_groups = {}
-    current_level = 0
-
-    # Назначаем уровни по Z
-    for layer_name in available_layers:
-        for layer in layers:
-            if layer.name == layer_name and layer_name in available_layers:
-                group = next((g for g, group_layers in layer_groups.items() if layer_name in group_layers), None)
-                if group and group not in assigned_groups:
-                    for glayer in layer_groups[group]:
-                        layer_z_coordinates[glayer] = current_level
-                    assigned_groups[group] = current_level
-                    current_level += space_beteween_layer
-                elif not group:
-                    layer_z_coordinates[layer_name] = current_level
-                    current_level += space_beteween_layer
-
-    # Задание цветов слоев
+    # Цвета слоев
     layer_colors = {
         'KN': [200, 0, 0], 'CM1': 'black', 'CM2': 'cyan', 'CSI': 'orange', 'P': 'blue',
         'NA': 'red', 'CPA': 'yellow', 'CNA': 'pink', 'CPE': 'brown', 'CNE': 'lightgreen',
@@ -73,10 +77,30 @@ def create_3d_plot(layers, selected_layers, opacity=1.0, plotter=None, highlight
         'X': 'turquoise', 'Y': 'lime', 'ZERO': 'indigo'
     }
 
-    # Построение слоев
-    order_dict = {name: index for index, name in enumerate(layer_order)}
-    sorted_layers = sorted(layers, key=lambda layer: order_dict.get(layer.name, len(layer_order)))
+    # Упорядоченные слои
+    available_layers = [layer for layer in layer_order if layer in selected_layers]
+    order_dict = {name: idx for idx, name in enumerate(layer_order)}
+    sorted_layers = sorted(layers, key=lambda l: order_dict.get(l.name, len(layer_order)))
+    layer_z_coordinates = {}
+    assigned_groups = {}
+    current_level = 0
 
+    for lname in available_layers:
+        for layer in layers:
+            if layer.name == lname:
+                group = next((g for g, ls in layer_groups.items() if lname in ls), None)
+                if group and group not in assigned_groups:
+                    for gname in layer_groups[group]:
+                        layer_z_coordinates[gname] = current_level
+                    assigned_groups[group] = current_level
+                    current_level += space_between_layer
+                elif not group:
+                    layer_z_coordinates[lname] = current_level
+                    current_level += space_between_layer
+
+    result_meshes = []
+
+    # Генерация основных слоев
     for layer in sorted_layers:
         if layer.name not in selected_layers:
             continue
@@ -85,86 +109,53 @@ def create_3d_plot(layers, selected_layers, opacity=1.0, plotter=None, highlight
         color = layer_colors.get(layer.name, 'white')
 
         for polygon in layer.polygons:
-            points = np.array([(pt[0], pt[1], base_z) for pt in polygon], dtype=np.float32)
-            top_points = points.copy()
-            top_points[:, 2] += layer_thickness
+            if polygon:
+                pts = np.array([(pt[0], pt[1], base_z) for pt in polygon], dtype=np.float32)
+                top = pts.copy()
+                top[:, 2] += layer_thickness
 
-            all_points = np.vstack([points, top_points])
-            num_points = len(polygon)
+                all_pts = np.vstack([pts, top])
+                num_pts = len(pts)
 
-            # Формирование граней
-            bottom_face = np.hstack([num_points, np.arange(num_points)])
-            top_face = np.hstack([num_points, np.arange(num_points) + num_points])
+                bottom_face = np.hstack([num_pts, np.arange(num_pts)])
+                top_face = np.hstack([num_pts, np.arange(num_pts) + num_pts])
+                sides = []
+                for i in range(num_pts):
+                    ni = (i + 1) % num_pts
+                    sides.extend([4, i, ni, ni + num_pts, i + num_pts])
 
-            side_faces = []
-            for i in range(num_points):
-                ni = (i + 1) % num_points
-                side_faces.extend([4, i, ni, ni + num_points, i + num_points])
+                faces = np.concatenate([bottom_face, top_face, sides])
+                mesh = pv.PolyData(all_pts, faces).triangulate()
 
-            faces = np.concatenate([bottom_face, top_face, side_faces])
-            mesh = pv.PolyData(all_points, faces)
-            mesh = mesh.triangulate()
+                result_meshes.append((mesh, color, opacity))
 
-            plotter.add_mesh(
-                mesh,
-                color=color,
-                opacity=opacity,
-                show_edges=False,
-                style='surface',
-                line_width=1
-            )
-
-    
-    for poly_group, layer in highlighted_polygons:
-        base_z = layer_z_coordinates.get(layer, 0)
-
+    # Выделенные полигоны
+    for poly_group, lname in highlighted_polygons:
+        base_z = layer_z_coordinates.get(lname, 0)
         for contour in poly_group:
-            x = np.array([pt[0] + 1 for pt in contour], dtype=np.float32) 
-            y = np.array([pt[1] + 1 for pt in contour], dtype=np.float32) 
+            x = np.array([pt[0] + 1 for pt in contour], dtype=np.float32)
+            y = np.array([pt[1] + 1 for pt in contour], dtype=np.float32)
 
-            bottom = np.column_stack((x, y, np.full_like(x, base_z, dtype=np.float32)))
-            top = np.column_stack((x, y, np.full_like(x, base_z + layer_thickness + 5, dtype=np.float32)))
-            all_points = np.vstack([bottom, top]).astype(np.float32)
+            bottom = np.column_stack((x, y, np.full_like(x, base_z)))
+            top = np.column_stack((x, y, np.full_like(x, base_z + layer_thickness + 5)))
 
+            all_pts = np.vstack([bottom, top])
             n = len(x)
+
             bottom_face = np.append(n, np.arange(n))
             top_face = np.append(n, np.arange(n) + n)
 
-            side_faces = []
+            sides = []
             for i in range(n):
                 ni = (i + 1) % n
-                side_faces.extend([4, i, ni, ni + n, i + n])
+                sides.extend([4, i, ni, ni + n, i + n])
 
-            faces = np.concatenate([bottom_face, top_face, side_faces])
-            highlight_mesh = pv.PolyData(all_points, faces)
-            highlight_mesh = highlight_mesh.triangulate()
+            faces = np.concatenate([bottom_face, top_face, sides])
+            mesh = pv.PolyData(all_pts, faces).triangulate()
 
-            plotter.add_mesh(
-                highlight_mesh,
-                color='white',
-                opacity=1.0,
-                show_edges=False,
-                line_width=2,
-                style='surface',
-                specular=1,
-                specular_power=50
-            )
+            result_meshes.append((mesh, 'white', 1.0))
 
-    
-    plotter.add_axes()    
-    plotter.show()
-
-
-class PlotterThread(QThread):
-    finished = Signal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.worker = parent
-
-    def run(self):
-        self.worker.show_plot_3D()
-        self.finished.emit()
+    return result_meshes
 
 
 class MainWindow(QMainWindow):
@@ -200,15 +191,22 @@ class MainWindow(QMainWindow):
         self.init_control_panel()
         self.init_plot_layout()
         self.init_graphics_layout()
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 1)  
+        self.progress_bar.setValue(0)
+        self.progress_bar.setMaximumHeight(12)
+        self.progress_bar.setTextVisible(False)
+        
         
         main_layout = QVBoxLayout()
         main_layout.addLayout(self.plot_layout, 7)
         main_layout.addLayout(self.graphics_layout, 5)
+        main_layout.addWidget(self.progress_bar)
 
         container = QWidget()
         container.setLayout(main_layout)
         self.setCentralWidget(container)
-
 
     def init_plotter(self):
         self.plotter_widget = QtInteractor(self)
@@ -241,7 +239,7 @@ class MainWindow(QMainWindow):
         self.result_log.setReadOnly(True)
         self.control_panel.addWidget(self.result_log)
         self.control_panel.addStretch()
-
+        
     def init_plot_layout(self):
         plot_panel = QVBoxLayout()
 
@@ -272,6 +270,7 @@ class MainWindow(QMainWindow):
 
             grid_layout.addWidget(group_box)
 
+        self.update_selected_layers()
 
         scroll.setWidget(scroll_widget)
         scroll.setWidgetResizable(True)
@@ -332,23 +331,51 @@ class MainWindow(QMainWindow):
 
         self.graphics_layout.addLayout(canvas_layout, 2)
 
-
     def update_selected_layers(self):
         self.selected_layers = {layer for layer, cb in self.checkbox_map.items() if cb.isChecked()}
 
     def show_plot_3D(self):
-        self.update_selected_layers()
-        opacity = self.opacity_slider.value() / 100.0 if self.opacity_cb.isChecked() else 1.0
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.setValue(0)
+        self.thread = QThread()
+        self.worker = MeshBuilderWorker(
+            self.topological_circuit.layers,
+            self.selected_layers,
+            self.highlighted_polygons,
+            self.opacity_slider.value() / 100
+        )
+        self.worker.moveToThread(self.thread)
 
+        self.thread.started.connect(self.worker.run)
+        self.worker.meshes_ready.connect(self.render_layer_meshes)
+        self.worker.meshes_ready.connect(self.thread.quit)
+        self.worker.meshes_ready.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+        self.thread.start()
+
+    def render_layer_meshes(self, meshes):
         self.plotter_widget.clear()
-        
-        create_3d_plot(self.topological_circuit.layers, self.selected_layers, opacity, self.plotter_widget, self.highlighted_polygons)
+        self.plotter_widget.set_background("white", top="lightgray") 
+        self.plotter_widget.enable_anti_aliasing("ssaa")
+        self.plotter_widget.enable_depth_peeling(64)
+
+        for mesh, color, opacity in meshes:
+            self.plotter_widget.add_mesh(
+                mesh,
+                color=color,
+                opacity=opacity,
+                show_edges=False,
+                style='surface',
+                line_width=1
+            )
+
+        self.plotter_widget.add_axes()
         self.plotter_widget.reset_camera()
         self.plotter_widget.update()
-
-
-    def on_plot_finished(self):
         self.result_log.append("Построение завершено")
+        self.progress_bar.setRange(0, 1)
+        self.progress_bar.setValue(0)
 
     def show_plot_2D(self, subcircuits=[]):
         self.ax.clear()
@@ -357,16 +384,46 @@ class MainWindow(QMainWindow):
 
     
     def open_file_dialog_top(self):
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.setValue(0)
         file_path, _ = QFileDialog.getOpenFileName(self, "Выберите CIF файл", "", "CIF Files (*.cif);;All Files (*)")
         if file_path:
             self.file_path_top = file_path
-            self.topological_circuit.clean()
-            self.topological_circuit.load_CIF(self.file_path_top)
-            self.topological_circuit.compile()
-            self.show_plot_3D()
-            self.show_plot_2D()
+            self.result_log.append(f"Компиляция схемы из файла {file_path}")
+            self.highlighted_polygons = []
+            self.highlighted_elements = []
+            self.topo_thread = QThread()
+            self.topo_worker = CircuitLoaderWorker(self.topological_circuit, self.file_path_top)
+            self.topo_worker.moveToThread(self.topo_thread)
+
+            self.topo_thread.started.connect(self.topo_worker.run)
+            self.topo_worker.finished.connect(self.on_topo_loaded)
+            self.topo_worker.error.connect(self.on_topo_load_error)
+            self.topo_worker.finished.connect(self.topo_thread.quit)
+            self.topo_worker.finished.connect(self.topo_worker.deleteLater)
+            self.topo_thread.finished.connect(self.topo_thread.deleteLater)
+
+            self.topo_thread.start()
+        else:
+            self.progress_bar.setRange(0, 1)
+            self.progress_bar.setValue(0)
+
+    def on_topo_loaded(self, topo):
+        self.result_log.append("Топологическая схема загружена и скомпилирована.")
+        self.topological_circuit = topo
+        self.progress_bar.setRange(0, 1)
+        self.progress_bar.setValue(0)
+        self.show_plot_2D()
+        self.show_plot_3D()
+
+    def on_topo_load_error(self, message):
+        self.result_log.append(f"Ошибка загрузки схемы: {message}")
+        self.progress_bar.setRange(0, 1)
+        self.progress_bar.setValue(0)
 
     def open_file_dialog_el(self):
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.setValue(0)
         file_path, _ = QFileDialog.getOpenFileName(self, "Выберите net файл", "", "net Files (*.net);;All Files (*)")
         if file_path:
             try:
@@ -376,8 +433,12 @@ class MainWindow(QMainWindow):
                     self.netlist_name.setText(f"Название: {netlist_name}")
                     self.netlist_text.setPlainText(content)
                     self.file_path_el = file_path
+                    self.result_log.append(f"Загружен файл электрической схемы {file_path}")
             except Exception as e:
                 self.netlist_text.setPlainText("Файл не загружен")
+
+        self.progress_bar.setRange(0, 1)
+        self.progress_bar.setValue(0)
 
     def verify_circuits(self):
         if not self.file_path_top:
@@ -386,9 +447,15 @@ class MainWindow(QMainWindow):
         if not self.file_path_el:
             self.result_log.append("Файл электрической схемы не выбран!")
             return
-
+        
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.setValue(0)
+        self.highlighted_polygons = []
+        self.highlighted_elements = []
         is_isomorphic, connections, time = verification(self.file_path_el, "Электрическая схема", topological_circuit=self.topological_circuit)
         self.result_log.append("Результат верификации:")
+        self.progress_bar.setRange(0, 1)
+        self.progress_bar.setValue(0)
         if is_isomorphic:
             self.result_log.append("Графы схем изоморфны.\n" + f"Время выполнения проверки: {time} секунд.")
         else:
@@ -397,8 +464,7 @@ class MainWindow(QMainWindow):
                 self.result_log.append("Найдена точка разрыва.")
                 self.highlighted_polygons = [self.topological_circuit.get_polygons(id) for id in connections]
                 self.highlighted_elements = connections
-                print(self.highlighted_elements)
-                self.run_plot_3D_in_thread()
+                self.show_plot_3D()
     
     def search_subcircuits(self):
         if not self.file_path_top:
@@ -407,8 +473,12 @@ class MainWindow(QMainWindow):
         if not self.file_path_el:
             self.result_log.append("Файл электрической схемы не выбран!")
             return
-
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.setValue(0)
+        self.subcircuits = []
         subcircuits, time = search_subcircuit(self.file_path_el, "Электрическая схема", topological_circuit=self.topological_circuit)
+        self.progress_bar.setRange(0, 1)
+        self.progress_bar.setValue(0)
         self.result_log.append("Результат верификации:")
         if subcircuits:
             self.result_log.append("Подсхемы найдены.\n" + f"Время выполнения проверки: {time} секунд.")
