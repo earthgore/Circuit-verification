@@ -1,14 +1,15 @@
 from src.algorithms.vf2 import subgraph_monomorphism
+from src.algorithms.vf2 import subgraph_isomorphism
 from src.circuits.ElectricalСircuit import ElecrticalCircuit
 from src.circuits.TopologicalCircuit import TopologicalCircuit
 from collections import defaultdict
+from timeit import default_timer as timer
 
 def compress_parallel_nodes(nx_graph):
     G = nx_graph.copy()
     new_node_id = max(G.nodes) + 1
     grouped = defaultdict(list)
 
-    # 1. Группируем подходящие вершины
     for node in G.nodes:
         if G.degree[node] != 3:
             continue
@@ -19,7 +20,6 @@ def compress_parallel_nodes(nx_graph):
         neighbors = list(G.neighbors(node))
         neighbors_set = frozenset(neighbors)
 
-        # Получаем метки рёбер к каждому соседу
         edge_labels = tuple(
             sorted((n, G.get_edge_data(node, n).get('label')) for n in neighbors)
         )
@@ -27,7 +27,6 @@ def compress_parallel_nodes(nx_graph):
         key = (label, neighbors_set, edge_labels)
         grouped[key].append(node)
 
-    # 2. Сжимаем группы с ≥2 вершинами
     for (label, neighbors_set, _), nodes in grouped.items():
         if len(nodes) < 2:
             continue
@@ -37,15 +36,12 @@ def compress_parallel_nodes(nx_graph):
         G.add_node(new_node)
         G.nodes[new_node]['label'] = label
 
-        # Добавляем рёбра к тем же соседям, с теми же метками
         for neighbor in neighbors_set:
-            # Берём метку ребра от первой вершины
             edge_label = G.get_edge_data(nodes[0], neighbor).get('label')
             G.add_edge(new_node, neighbor)
             if edge_label is not None:
                 G[new_node][neighbor]['label'] = edge_label
 
-        # Удаляем старые вершины
         for n in nodes:
             G.remove_node(n)
 
@@ -64,11 +60,9 @@ def compress_series_nodes(nx_graph):
         degree = G.degree[node]
         label = G.nodes[node].get('label')
 
-        # Ищем только троечников с меткой N или P
         if degree != 3 or label not in ['N', 'P']:
             continue
 
-        # Запускаем BFS с фильтром по метке и ребрам
         queue = [node]
         component = set()
         local_visited = set()
@@ -82,7 +76,6 @@ def compress_series_nodes(nx_graph):
             current_degree = G.degree[current]
             current_label = G.nodes[current].get('label')
 
-            # Только 2/3 степень, троечники — с нужной меткой
             if current_degree == 3 and current_label != valid_label:
                 continue
             if current_degree not in [2, 3]:
@@ -95,21 +88,17 @@ def compress_series_nodes(nx_graph):
                 edge_data = G.get_edge_data(current, neighbor, default={})
                 neighbor_degree = G.degree[neighbor]
 
-                # Если сосед — двойка и ребро gate, пропускаем
                 if neighbor_degree == 2 and edge_data.get('label') == 'gate':
                     continue
 
-                # Иначе, добавляем в очередь
                 if neighbor not in local_visited:
                     queue.append(neighbor)
 
-        # Считаем троечников
         deg3_nodes = [n for n in component if G.degree[n] == 3]
         if len(deg3_nodes) >= 2:
             components_to_merge.append((component, valid_label))
             visited.update(component)
 
-    # Сжимаем компоненты
     for comp, label in components_to_merge:
         new_node = new_node_id
         new_node_id += 1
@@ -131,14 +120,16 @@ def compress_series_nodes(nx_graph):
 
     return G
 
-def verification(filename_electrical, name_electrical, filename_topological, name_topological):
+def verification(filename_electrical, name_electrical=None, filename_topological=None, name_topological=None, topological_circuit=None):
+    start_time = timer()
     electrical_circuit = ElecrticalCircuit(name_electrical)
     electrical_circuit.load_NET(filename_electrical)
     electrical_circuit.compile()
     
-    topological_circuit = TopologicalCircuit(name_topological)
-    topological_circuit.load_CIF(filename_topological)
-    topological_circuit.compile()
+    if topological_circuit == None:
+        topological_circuit = TopologicalCircuit(name_topological)
+        topological_circuit.load_CIF(filename_topological)
+        topological_circuit.compile()
 
     print(f"electrical circuit : {electrical_circuit.nx_graph.number_of_nodes()} : {electrical_circuit.nx_graph.number_of_edges()}")
     print(f"topological circuit : {topological_circuit.nx_graph.number_of_nodes()} : {topological_circuit.nx_graph.number_of_edges()}")
@@ -150,50 +141,140 @@ def verification(filename_electrical, name_electrical, filename_topological, nam
     print(f"electrical circuit : {G1.number_of_nodes()} : {G1.number_of_edges()}")
     print(f"topological circuit : {G2.number_of_nodes()} : {G2.number_of_edges()}")
 
-    isomorph, mapping, time = subgraph_monomorphism(G2, G1)
+    isomorph, _ = subgraph_isomorphism(G2, G1)
     
     if isomorph:
         print("The graphs are isomorphic.")
+        end_time = timer()
+        elapsed_time = end_time - start_time
+        return True, [], elapsed_time
     else:
         print("The graphs are not isomorphic.")
-
-    print(mapping)
-    topological_circuit.visualize_trans([])
-
-    degrees = dict(electrical_circuit.nx_graph.degree())
-
-    # Подсчитываем сколько вершин каждой степени
-    degree_counts = {}
-
-    for degree in degrees.values():
-        if degree in degree_counts:
-            degree_counts[degree] += 1
-        else:
-            degree_counts[degree] = 1
-
-    # Выводим количество вершин каждой степени
-    print("Количество вершин каждой степени связности:")
-    for degree, count in sorted(degree_counts.items()):
-        print(f"Степень {degree}: {count} вершины")
-
-    degrees = dict(topological_circuit.nx_graph.degree())
+        lost_connection = search_lost_connections(electrical_circuit.nx_graph, topological_circuit.nx_graph)
+        end_time = timer()
+        elapsed_time = end_time - start_time
+        return False, lost_connection, elapsed_time
+        
+def search_lost_connections(el_graph, top_graph):
+    electrical_graph = el_graph.copy()
+    topological_graph = top_graph.copy()
+    el_degrees = dict(electrical_graph.degree())
 
     # Подсчитываем сколько вершин каждой степени
-    degree_counts = {}
+    el_degree_counts = {}
 
-    for degree in degrees.values():
-        if degree in degree_counts:
-            degree_counts[degree] += 1
+    for degree in el_degrees.values():
+        if degree in el_degree_counts:
+            el_degree_counts[degree] += 1
         else:
-            degree_counts[degree] = 1
+            el_degree_counts[degree] = 1
 
-    # Выводим количество вершин каждой степени
-    print("Количество вершин каждой степени связности:")
-    for degree, count in sorted(degree_counts.items()):
-        print(f"Степень {degree}: {count} вершины")
+    top_degrees = dict(topological_graph.degree())
+
+    # Подсчитываем сколько вершин каждой степени
+    top_degree_counts = {}
+
+    for degree in top_degrees.values():
+        if degree in top_degree_counts:
+            top_degree_counts[degree] += 1
+        else:
+            top_degree_counts[degree] = 1
+
+    diff_degrees = {}
+    sum_el = sum_top = 0
+    for degree in set(el_degree_counts) | set(top_degree_counts):
+        el_count = el_degree_counts.get(degree, 0)
+        top_count = top_degree_counts.get(degree, 0)
+        if el_count != top_count:
+            print(f"Степень {degree}: {el_count} вершины и {top_count} вершины")
+            sum_el += el_count
+            sum_top += top_count
+            diff_degrees[degree] = el_count - top_count
+
     
-    print(f"Time taken: {time:.6f} seconds")
+    if sum(k * v for k, v in diff_degrees.items()) != 0:
+        return []
+    
+    for node, degree in top_degrees.items():
+        if degree in diff_degrees:
+            topological_graph.nodes[node]["label"] = "potential"
+    
+    for node, degree in el_degrees.items():
+        if degree in diff_degrees:
+            electrical_graph.nodes[node]["label"] = "potential"
+
+    positive_diff_degrees = {k for k, v in diff_degrees.items() if v > 0}
+    removable_el_nodes = [
+        n for n, d in electrical_graph.nodes(data=True)
+        if d.get("label") == "potential" and electrical_graph.degree[n] in positive_diff_degrees
+    ]
+    negative_diff_degrees = {k for k, v in diff_degrees.items() if v < 0}
+    removable_top_nodes = [
+        n for n, d in topological_graph.nodes(data=True)
+        if d.get("label") == "potential" and topological_graph.degree[n] in negative_diff_degrees
+    ]
+    if(len(removable_el_nodes) <= len(removable_top_nodes)):
+        for node_to_remove in removable_el_nodes:
+            G_copy = electrical_graph.copy()
+            G_copy.remove_node(node_to_remove)
+            print(f"Удаляем из электрического: {node_to_remove}")
+
+            isomorphic, mapping = subgraph_isomorphism(G_copy, topological_graph)
+            if isomorphic:
+                print(f"Удалена лишняя вершина электрического: {node_to_remove}")
+                lost_connection = [n for n in topological_graph.nodes() if n not in mapping.keys()]
+                return lost_connection
+    else:
+        for node_to_remove in removable_top_nodes:
+            G_copy = topological_graph.copy()
+            G_copy.remove_node(node_to_remove)
+            print(f"Удаляем из топологического: {node_to_remove}")
+
+            monomorphic, mapping = subgraph_monomorphism(electrical_graph, G_copy)
+            if monomorphic:
+                print(f"Удалена лишняя вершина топологического: {node_to_remove}")
+                lost_connection = [n for n in topological_graph.nodes() if n not in mapping.values()]
+                return lost_connection
+            
+    return []
 
 
+
+def search_subcircuit(filename_electrical, name_electrical=None, filename_topological=None, name_topological=None, topological_circuit=None):
+    start_time = timer()
+    electrical_circuit = ElecrticalCircuit(name_electrical)
+    electrical_circuit.load_NET(filename_electrical)
+    electrical_circuit.compile()
+    
+    if topological_circuit == None:
+        topological_circuit = TopologicalCircuit(name_topological)
+        topological_circuit.load_CIF(filename_topological)
+        topological_circuit.compile()
+
+    G_copy = topological_circuit.nx_graph.copy()
+    subcircuits = []
+    isomorph, mapping = subgraph_isomorphism(electrical_circuit.nx_graph, G_copy)
+    while isomorph:
+        subcircuits.append(mapping.keys())
+        for u, v in electrical_circuit.nx_graph.edges():
+            mapped_u = None
+            mapped_v = None
+
+            for copy_node, subgraph_node in mapping.items():
+                if subgraph_node == u:
+                    mapped_u = copy_node
+                elif subgraph_node == v:
+                    mapped_v = copy_node
+
+            if mapped_u is not None and mapped_v is not None and G_copy.has_edge(mapped_u, mapped_v):
+                G_copy.remove_edge(mapped_u, mapped_v)
+                
+        isomorph, mapping = subgraph_isomorphism(electrical_circuit.nx_graph, G_copy)
+    else:
+        print("The subcircuit is not found.")
+        end_time = timer()
+        elapsed_time = end_time - start_time
+        return subcircuits, elapsed_time
     
 
+    
